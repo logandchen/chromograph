@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Chromagraph",
+  "version": "1.0",
+  "description": "Color selected text with your own letter and number colors.",
+  "permissions": ["activeTab", "scripting", "contextMenus", "storage"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Chromagraph", "default_popup": "popup.html" },
+  "commands": {
+    "toggle": {
+      "suggested_key": { "default": "Alt+Shift+C" },
+      "description": "Color the selected text (or the whole page if nothing is selected)"
+    }
+  }
+}

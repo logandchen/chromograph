@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+body{width:290px;margin:0;padding:14px;font:14px/1.4 system-ui,sans-serif;color:#1c1b18;background:#f5f3ee}
+@media (prefers-color-scheme:dark){body{color:#f2f0ea;background:#17171c}textarea,button{background:#22222a!important;color:inherit;border-color:#3a3a44!important}button.p{background:#f2f0ea!important;color:#17171c}}
+h1{font-size:16px;margin:0 0 10px}
+button{font:inherit;padding:7px 10px;border-radius:999px;border:1px solid #cfcabd;background:#fff;cursor:pointer}
+button.p{background:#1c1b18;color:#fff;border-color:transparent;font-weight:600}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+label{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;margin-bottom:8px}
+input[type=range]{width:100%}
+textarea{width:100%;box-sizing:border-box;height:56px;font:11px ui-monospace,monospace;border:1px solid #cfcabd;border-radius:8px;padding:6px}
+small{opacity:.7;display:block;margin:6px 0}
+</style></head>
+<body>
+<h1>Chromagraph</h1>
+<div class="row"><button class="p" id="selection">Color selection</button><button id="page">Whole page</button><button id="clear">Clear</button></div>
+<label>Blend <input type="range" id="t" min="0" max="100"></label>
+<label>Strength <input type="range" id="al" min="15" max="100"></label>
+<label>Style <span><button id="ink"></button></span></label>
+<small>Palette code (from the Chromagraph app → Palette → Copy palette code):</small>
+<textarea id="code" placeholder='{"A":"#ff0000", …}'></textarea>
+<div class="row" style="margin-top:6px"><button id="save">Save palette</button><small id="msg" style="margin:6px 0 0"></small></div>
+<script src="popup.js"></script>
+</body></html>

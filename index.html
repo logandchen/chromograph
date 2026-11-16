@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chromagraph</title>
+<style>
+:root{--bg:#f5f3ee;--surface:#fff;--ink:#1c1b18;--muted:#6d695f;--line:#e0dcd1;--stage:#fbfaf7;--radius:14px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e0e11;--surface:#17171c;--ink:#f2f0ea;--muted:#9b978d;--line:#2b2b33;--stage:#121216}}
+:root[data-theme="dark"]{--bg:#0e0e11;--surface:#17171c;--ink:#f2f0ea;--muted:#9b978d;--line:#2b2b33;--stage:#121216}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 20px;border-bottom:1px solid var(--line)}
+#logo{margin:0;font-size:22px;font-weight:800;letter-spacing:.04em;white-space:nowrap;padding:2px 6px}
+nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+nav button{border-color:transparent;background:none}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+#acct{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 6px;max-width:200px}
+#acct.out{padding:8px 16px}
+#acct span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.av{width:28px;height:28px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--line);font-weight:800;font-size:13px;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av.big{width:52px;height:52px;font-size:22px}
+dialog{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--ink);padding:22px;width:min(440px,calc(100% - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 6px;font-size:20px}
+dialog p,dialog li{color:var(--muted);font-size:14px}
+dialog ol{padding-left:20px;margin:8px 0}
+dialog code{background:var(--bg);border-radius:6px;padding:1px 6px;font-size:13px;color:var(--ink);overflow-wrap:anywhere}
+#who{display:flex;align-items:center;gap:12px;margin:10px 0 14px}
+#who[hidden],#gbtn:empty{display:none}
+#who b{display:block}#who small{color:var(--muted);overflow-wrap:anywhere}
+#gbtn{min-height:44px;margin:12px 0;color-scheme:light}
+#gcidRow{display:flex;gap:8px;margin-top:8px}
+#gcid{flex:1;min-width:0;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+#acctMsg{color:#c2410c;font-size:14px;min-height:1.2em;margin:6px 0 0}
+.dlgEnd{display:flex;justify-content:space-between;gap:8px;margin-top:16px}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
+section[hidden]{display:none}
+h2{font-size:28px;margin:0 0 6px;text-wrap:balance}
+h3{margin:0 0 8px;font-size:17px}
+p{margin:0 0 14px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.gap{margin-top:18px}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;background:var(--surface)}
+.chip:has(input:checked){background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.label{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 8px}
+.banner{border:1px dashed var(--muted);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:14px}
+.preset{border-radius:14px;padding:10px 14px;text-align:left;display:grid;gap:6px}
+.preset span{display:flex;gap:2px}
+.preset i{width:18px;height:22px;border-radius:5px;font:800 12px/22px inherit;font-style:normal;text-align:center;color:#1c1b18}
+
+/* ---------- test stage ---------- */
+#stage{--glow:transparent;background:radial-gradient(circle at 50% 26%,color-mix(in srgb,var(--glow) 40%,transparent),transparent 60%),var(--stage);border:1px solid var(--line);border-radius:20px;padding:16px;transition:background .25s}
+#stage .top{display:flex;justify-content:space-between;align-items:center}
+#ribbon{display:flex;flex-wrap:wrap;gap:3px;margin:12px 0 0;min-height:10px}
+#ribbon i{width:14px;height:10px;border-radius:3px;border:1px solid transparent}
+#ribbon i.none{border-color:var(--muted)}
+#glyph{font-size:clamp(100px,24vh,210px);font-weight:800;line-height:1.2;text-align:center;color:var(--ink);user-select:none;width:fit-content;min-width:1.35em;margin:14px auto 22px;padding:0 .18em;border-radius:.16em;transition:background .15s}
+#glyph.in{animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+#glyph.shake{animation:shake .3s}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+@keyframes shake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+@media (prefers-reduced-motion:reduce){#glyph.in,#glyph.shake{animation:none}}
+#pick,#choices{max-width:640px;margin:0 auto}
+.swgrid{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+.sw{aspect-ratio:1.5;border-radius:8px;padding:0;border:1px solid rgba(0,0,0,.14)}
+.sw:hover{transform:scale(1.12)}
+#pick .row{justify-content:space-between;margin-top:14px}
+.sliders{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin-top:14px;font-size:14px;color:var(--muted)}
+.sliders .use{grid-column:1/-1;justify-self:start;border-color:rgba(0,0,0,.14);font-weight:700}
+.hue,.shade{appearance:none;-webkit-appearance:none;height:16px;border-radius:8px;border:1px solid rgba(0,0,0,.14);min-width:0;width:100%}
+.hue{background:linear-gradient(90deg,hsl(0 85% 80%),hsl(60 85% 80%),hsl(120 85% 80%),hsl(180 85% 80%),hsl(240 85% 80%),hsl(300 85% 80%),hsl(360 85% 80%))}
+.hue::-webkit-slider-thumb,.shade::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #1c1b18;cursor:grab}
+.hue::-moz-range-thumb,.shade::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #1c1b18}
+#choices{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+#choices button{height:110px;border-radius:16px;border:3px solid transparent;font-weight:700;font-size:14px;color:#1c1b18;display:flex;align-items:flex-end;justify-content:flex-start;padding:8px 12px}
+#choices button.right{border-color:var(--ink);transform:scale(1.05)}
+#choices button.wrong{opacity:.25}
+kbd{font:12px ui-monospace,monospace;border:1px solid currentColor;border-radius:5px;padding:0 5px;opacity:.7}
+
+/* ---------- palette ---------- */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px}
+.tile{aspect-ratio:1;border-radius:12px;padding:0;font-size:24px;font-weight:800;border:2px solid transparent;color:#1c1b18}
+.tile.empty{border:2px dashed var(--line);background:none;color:var(--muted)}
+.tile.sel{outline:3px solid var(--ink);outline-offset:2px}
+#editor{margin-top:16px;max-width:640px}
+#edG{font-size:34px;font-weight:800;width:48px;text-align:center}
+input[type=color]{width:56px;height:40px;border:1px solid var(--line);border-radius:10px;background:none;padding:2px;cursor:pointer}
+#preview{font-size:26px;font-weight:800;line-height:1.8;margin-top:8px}
+
+/* ---------- reader ---------- */
+#readerGrid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){#readerGrid{grid-template-columns:320px minmax(0,1fr)}}
+textarea{width:100%;min-height:200px;resize:vertical;font:inherit;font-size:15px;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;justify-self:start}
+.seg button{border:0;border-radius:0;background:none;padding:6px 14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ctl{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:center;font-size:14px;margin-bottom:18px}
+.ctl .ends{display:flex;align-items:center;gap:8px}
+input[type=range]{flex:1;accent-color:var(--ink);min-width:80px}
+#paper,#demoText{white-space:pre-wrap;overflow-wrap:anywhere}
+#paper{font-weight:800;letter-spacing:.02em;line-height:1.9;min-height:240px;padding:6px 10px}
+#paper:empty::before{content:"Your colored text shows up here.";color:var(--muted);font-weight:400}
+#pdfView{overflow-x:auto}
+#pdfBar{display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px;position:sticky;top:8px;z-index:5}
+#zOut,#zIn{width:40px;padding:8px 0;font-weight:800}
+#zPct{min-width:64px;padding:8px 6px;font-variant-numeric:tabular-nums}
+#pdfBar button{box-shadow:0 1px 6px rgba(0,0,0,.2)}
+#pdfWrap.full{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:12px 16px 40px}
+#pdfView .pg{content-visibility:auto;position:relative;margin:0 auto 14px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.3);overflow:hidden}
+#pdfView canvas{display:block}
+#pdfView .pg:not(.near) .textLayer.ready{content-visibility:hidden}
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;mix-blend-mode:multiply;font-weight:400;letter-spacing:0;text-size-adjust:none;font-kerning:none;font-variant-ligatures:none}
+.pdf-ink .textLayer{mix-blend-mode:screen}
+.pdf-ink .chroma-g::before{top:-.2em;bottom:-.2em;left:0;right:0;background:rgb(var(--i));-webkit-mask-image:none;mask-image:none}
+.textLayer span:not(.chroma-w):not(.chroma-g),.textLayer br{color:transparent;position:absolute;white-space:pre;transform-origin:0 0}
+#paper .ln{content-visibility:auto;contain-intrinsic-size:auto 1.9em;padding:0 .7em;margin:0 -.7em}
+#paper.drag{outline:2px dashed var(--ink);outline-offset:6px}
+#recDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#e5484d;margin-right:6px;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+#bm{display:inline-block;padding:10px 18px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;text-decoration:none;cursor:grab}
+ol{padding-left:20px;margin:0 0 14px}
+code{font:13px ui-monospace,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.two{display:grid;gap:16px}
+@media (min-width:860px){.two{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="logo">Chromagraph</h1>
+  <nav role="tablist">
+    <button role="tab" data-tab="test">Test</button>
+    <button role="tab" data-tab="palette">Palette</button>
+    <button role="tab" data-tab="reader">Reader</button>
+    <button role="tab" data-tab="anywhere">Anywhere</button>
+  </nav>
+  <button id="theme" title="Switch light / dark">Light / Dark</button>
+  <button id="acct" class="out" aria-haspopup="dialog">Sign in</button>
+</header>
+<dialog id="acctDlg" aria-labelledby="acctTitle">
+  <h2 id="acctTitle">Sign in</h2>
+  <div id="who" hidden><span class="av big" id="whoAv"></span><div><b id="whoName"></b><small id="whoMail"></small></div></div>
+  <p id="acctBlurb">Each person gets their own colors, settings and test results. Sign in with Google to open yours.</p>
+  <div id="gbtn"></div>
+  <details id="gSetup"><summary>Google setup (one time)</summary>
+    <ol>
+      <li>Open <code>console.cloud.google.com</code>, pick or make a project, then go to APIs &amp; Services → Credentials.</li>
+      <li>Create credentials → OAuth client ID → Web application.</li>
+      <li>Under “Authorized JavaScript origins” add <code id="gOrigin"></code></li>
+      <li>Copy the Client ID and paste it here.</li>
+    </ol>
+    <div id="gcidRow"><input id="gcid" placeholder="1234-abc.apps.googleusercontent.com" aria-label="Google client ID" autocomplete="off" spellcheck="false"><button id="gcidSave">Save</button></div>
+  </details>
+  <p id="acctMsg" role="status"></p>
+  <div class="dlgEnd"><button id="signOut" hidden>Sign out</button><span></span><button id="acctClose">Close</button></div>
+</dialog>
+<main>
+
+<!-- ================= TEST ================= -->
+<section id="tab-test">
+  <div id="setup" class="card">
+    <h2>What color is each letter?</h2>
+    <p class="muted">Two quick ways to set your colors.</p>
+
+    <div class="label">Fastest: start from a preset, then fix the ones that are wrong</div>
+    <div class="row" id="presets"></div>
+
+    <div class="label">Or tap through them one at a time</div>
+    <p class="muted small">Each symbol appears on its own. Tap the color that fits and it moves straight to the next one, or use the Hue and Shade sliders to dial in an exact color.</p>
+    <div class="row">
+      <label class="chip"><input type="checkbox" name="set" value="letters" checked>Letters A–Z</label>
+      <label class="chip"><input type="checkbox" name="set" value="digits" checked>Numbers 0–9</label>
+      <label class="chip"><input type="checkbox" name="set" value="symbols">Symbols . ? + @ …</label>
+    </div>
+    <div class="row gap">
+      <button class="primary" id="startMap">Start</button>
+      <label class="chip"><input type="checkbox" id="twice">Ask twice and score my consistency</label>
+      <button id="startMatch">Speed match</button>
+      <span class="muted small" id="matchHint"></span>
+    </div>
+    <div id="lastStats" class="muted small gap"></div>
+  </div>
+
+  <div id="stage" hidden>
+    <div class="top"><button id="quit">Exit</button><span id="count" class="muted"></span></div>
+    <div id="ribbon"></div>
+    <div id="glyph" aria-live="polite">A</div>
+    <div id="pick">
+      <div id="swatches"></div>
+      <div class="row">
+        <button id="back">Back</button>
+        <button id="none">No color <kbd>N</kbd></button>
+      </div>
+    </div>
+    <div id="choices" hidden></div>
+  </div>
+
+  <div id="done" class="card" hidden></div>
+</section>
+
+<!-- ================= PALETTE ================= -->
+<section id="tab-palette" hidden>
+  <div class="banner demoNote">These are placeholder colors. Pick a preset on the Test tab, or tap any tile to set your own.</div>
+  <div class="card">
+    <h2>Your palette</h2>
+    <p class="muted">Tap a tile to change or remove its color.</p>
+    <div id="grid"></div>
+    <div id="editor" hidden>
+      <div class="row" style="margin-bottom:10px">
+        <span id="edG"></span>
+        <button id="edX">Remove color</button>
+        <label class="row small muted" style="gap:6px">Custom <input type="color" id="edC" aria-label="Custom color"></label>
+      </div>
+      <div id="edSw"></div>
+    </div>
+    <div class="label">Preview</div>
+    <div id="preview"></div>
+    <div class="row gap">
+      <button id="exp">Save palette to file</button>
+      <button id="imp">Load palette file</button>
+      <button id="copy">Copy palette code</button>
+      <button id="reset">Reset to placeholders</button>
+      <span id="palMsg" class="muted small"></span>
+      <input type="file" id="impFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</section>
+
+<!-- ================= READER ================= -->
+<section id="tab-reader" hidden>
+  <div class="banner demoNote">Using placeholder colors until you set your own.</div>
+  <div id="readerGrid">
+    <div class="card">
+      <h3>Text</h3>
+      <textarea id="ta" placeholder="Paste or type here…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="openFile">Open PDF or text file</button>
+        <button id="mic">Dictate</button>
+        <button id="sample">Sample</button>
+        <button id="closePdf" hidden>Close PDF</button>
+      </div>
+      <p id="readMsg" class="muted small" style="margin:10px 0 0"></p>
+      <input type="file" id="file" accept=".pdf,.txt,.md,text/plain,application/pdf" hidden>
+    </div>
+    <div class="card">
+      <div class="ctl">
+        <span>Style</span>
+        <div class="seg" id="styleSeg"><button data-ink="0">Highlight</button><button data-ink="1">Colored letters</button></div>
+        <span id="blendL">Blend</span>
+        <div class="ends" id="blendW"><span class="muted">Blocky</span><input type="range" id="blend" min="0" max="100"><span class="muted">Blended</span></div>
+        <span id="strengthL">Strength</span>
+        <div class="ends" id="strengthW"><span class="muted">Faint</span><input type="range" id="strength" min="15" max="100"><span class="muted">Full</span></div>
+        <span>Text size</span>
+        <div class="ends"><input type="range" id="size" min="14" max="44"></div>
+      </div>
+      <div id="paper"></div>
+      <div id="pdfWrap" hidden><div id="pdfBar"><button id="zOut" aria-label="Zoom out">−</button><button id="zPct" title="Reset zoom">100%</button><button id="zIn" aria-label="Zoom in">+</button><button id="fullPdf">Full screen</button></div><div id="pdfView"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ANYWHERE ================= -->
+<section id="tab-anywhere" hidden>
+  <h2>Use your colors on any web page</h2>
+  <p class="muted">Two ways, both using the palette and blend settings from this app. Colors adjust to each page: soft pastels behind dark text, deep shades behind light text.</p>
+  <div class="two">
+    <div class="card">
+      <h3>Bookmark button (any browser, no install)</h3>
+      <ol>
+        <li>Show your bookmarks bar, then drag this button onto it:</li>
+      </ol>
+      <p><a id="bm" href="#">Chromagraph</a></p>
+      <ol start="2">
+        <li>On any page, select some text and click the bookmark. Only that text gets colored.</li>
+        <li>Click it with nothing selected to color the whole page; click again to clear.</li>
+      </ol>
+      <p class="muted small">The bookmark carries your current palette and settings. If you change them, drag the button up again.</p>
+    </div>
+    <div class="card">
+      <h3>Chrome extension (right-click menu + shortcut)</h3>
+      <ol>
+        <li>Open <code>chrome://extensions</code> and turn on Developer mode.</li>
+        <li>Click “Load unpacked” and choose the <code>extension</code> folder that sits next to this page.</li>
+        <li>Here, go to Palette → “Copy palette code”, then paste it into the extension’s popup and press Save.</li>
+        <li>Select text on any page → right-click → “Color this text”, or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>.</li>
+      </ol>
+      <p class="muted small">Works in Chrome, Edge, Brave and Arc.</p>
+    </div>
+  </div>
+  <div class="card gap">
+    <h3>Try it here</h3>
+    <p class="muted small">Select part of this paragraph, then press the button.</p>
+    <p id="demoText">In 1812 a doctor named Georg Sachs described how every letter and number had its own color for him. Some people see written symbols this way: the 5 may be green, the A red, and Tuesday a deep blue.</p>
+    <div class="row"><button id="demoPaint" class="primary">Color my selection</button><button id="demoClear">Clear</button></div>
+  </div>
+</section>
+</main>
+
+<script>
+/*CORE-START*/
+function chromaCore(cmd,P,o){
+  o=o||{};var d=document,host=o.host||d.documentElement,scope=o.root||d.body,i;
+  if(!d.getElementById('chroma-css')){var st=d.createElement('style');st.id='chroma-css';
+    var A='var(--chroma-al,1)',T='var(--chroma-t,0)',M='linear-gradient(180deg,transparent,#000 calc('+T+'*42%),#000 calc(100% - '+T+'*42%),transparent)';
+    st.textContent='.chroma-w{position:relative;z-index:0}.chroma-g{position:relative}.chroma-g::before{content:"";position:absolute;z-index:-1;pointer-events:none;top:calc('+T+'*-.28em);bottom:calc('+T+'*-.28em);left:calc('+T+'*(1 - var(--aa,1))*-.5em);right:calc('+T+'*(1 - var(--ba,1))*-.5em);background:linear-gradient(90deg,rgb(var(--a)/calc('+A+'*var(--aa,1))) 0,rgb(var(--c)/'+A+') calc('+T+'*50%),rgb(var(--c)/'+A+') calc(100% - '+T+'*50%),rgb(var(--b)/calc('+A+'*var(--ba,1))) 100%);-webkit-mask-image:'+M+';mask-image:'+M+'}.chroma-ink .chroma-g{color:rgb(var(--i))}.chroma-ink .chroma-g::before{display:none}.chroma-flat .chroma-g::before{-webkit-mask-image:none;mask-image:none}';
+    (d.head||d.documentElement).appendChild(st)}
+  if(cmd==='clear'){var ws=scope.querySelectorAll('.chroma-w');for(i=0;i<ws.length;i++){var pw=ws[i].parentNode;pw.replaceChild(d.createTextNode(ws[i].textContent),ws[i]);pw.normalize()}return 0}
+  host.style.setProperty('--chroma-t',o.t==null?.5:o.t);
+  host.style.setProperty('--chroma-al',o.al==null?.9:o.al);
+  host.classList.toggle('chroma-ink',!!o.ink);host.classList.toggle('chroma-flat',o.t!=null&&o.t<=0);
+  if(cmd==='style')return 0;
+  var cache={};
+  function cl(x,a,b){return Math.max(a,Math.min(b,x))}
+  function out(h,s,l){var a=s*Math.min(l,1-l);function f(n){var k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1))))}return[f(0),f(8),f(4)]}
+  function mid(a,b){return((a[0]+b[0])>>1)+' '+((a[1]+b[1])>>1)+' '+((a[2]+b[2])>>1)}
+  function col(ch,lb){var key=ch+(lb?1:0);if(cache[key]!==undefined)return cache[key];var x=P[ch]||P[ch.toUpperCase()],v=null;
+    if(typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x)){
+      var r=parseInt(x.substr(1,2),16)/255,g=parseInt(x.substr(3,2),16)/255,b=parseInt(x.substr(5,2),16)/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,dl=mx-mn,h=0,s=0;
+      if(dl>.001){s=dl/(1-Math.abs(2*l-1));h=mx===r?((g-b)/dl)%6:mx===g?(b-r)/dl+2:(r-g)/dl+4;h*=60;if(h<0)h+=360}
+      v={c:lb?out(h,s,cl(l,.64,.93)):out(h,Math.min(s,.55),cl(l-.46,.24,.44)),i:lb?out(h,Math.min(s,.8),cl(l-.42,.26,.46)):out(h,s,cl(l,.66,.88))}}
+    return cache[key]=v}
+  var lp=null,lv=true;function lightBg(el){if(el===lp)return lv;var m=/(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(getComputedStyle(el).color);lp=el;return lv=!m||(m[1]*.299+m[2]*.587+m[3]*.114)<140}
+  var r=o.range,sc,so,ec,eo,top=scope,nodes=[],lbs=[],n,count=0;
+  if(r){sc=r.startContainer;so=r.startOffset;ec=r.endContainer;eo=r.endOffset;top=r.commonAncestorContainer}
+  if(top.nodeType===3){if(top.parentElement){nodes.push(top);lbs.push(lightBg(top.parentElement))}}
+  else{var tw=d.createTreeWalker(top,4);while((n=tw.nextNode())){
+    var pe=n.parentElement;
+    if(!pe||pe.closest('script,style,noscript,textarea,select,option,.chroma-w')||pe.isContentEditable)continue;
+    if(r&&!r.intersectsNode(n))continue;
+    nodes.push(n);lbs.push(lightBg(pe))}}
+  nodes.forEach(function(n,k){
+    if(!n.parentElement)return;
+    if(n===ec){if(eo<=0)return;if(eo<n.nodeValue.length)n.splitText(eo)}
+    if(n===sc&&so>0){if(so>=n.nodeValue.length)return;n=n.splitText(so)}
+    var s=n.nodeValue,lb=lbs[k],cs=[],any=false,j;
+    for(j=0;j<s.length;j++){cs[j]=col(s[j],lb);if(cs[j])any=true}
+    if(!any)return;
+    var w=d.createElement('span'),buf='';w.className='chroma-w';
+    for(j=0;j<s.length;j++){var c=cs[j];if(!c){buf+=s[j];continue}
+      if(buf){w.appendChild(d.createTextNode(buf));buf=''}
+      var e=d.createElement('span'),a=cs[j-1],b=cs[j+1],cc=c.c.join(' ');e.className='chroma-g';e.textContent=s[j];
+      e.style.cssText='--c:'+cc+';--i:'+c.i.join(' ')+';--a:'+(a?mid(c.c,a.c):cc)+';--b:'+(b?mid(c.c,b.c):cc)+(a?'':';--aa:0')+(b?'':';--ba:0');
+      w.appendChild(e);count++}
+    if(buf)w.appendChild(d.createTextNode(buf));
+    n.parentNode.replaceChild(w,n)});
+  return count}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+/* Palette, settings and test results are kept per signed-in person; everything else is shared on this device. */
+let UID=null;const PER={'chroma.palette':1,'chroma.settings2':1,'chroma.stats':1},sk=k=>UID&&PER[k]?'chroma.u.'+UID+k.slice(6):k;
+const store={get(k,d){try{const v=localStorage.getItem(sk(k));return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(sk(k),JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(sk(k))}catch(e){}}};
+let USERS=store.get('chroma.users',{});UID=store.get('chroma.current',null);if(UID&&!USERS[UID])UID=null;
+const SETS={letters:[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'],digits:[...'0123456789'],symbols:[...`.,!?;:'"()+-=/*&@#$%`]};
+const ALL=[...SETS.letters,...SETS.digits,...SETS.symbols];
+const DARK='#1c1b18';
+function hsl2hex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));return hex([f(0),f(8),f(4)].map(x=>x*255))}
+const rgb=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+const hex=a=>'#'+a.map(x=>Math.round(x).toString(16).padStart(2,'0')).join('');
+const dist=(a,b)=>{const x=rgb(a),y=rgb(b);return(Math.abs(x[0]-y[0])+Math.abs(x[1]-y[1])+Math.abs(x[2]-y[2]))/255};
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* pastel swatches: 12 hues x 2 tones + neutrals */
+const HUES=[0,20,38,54,80,130,165,190,215,245,280,325];
+const SW=[...[92,86,80,73,66].flatMap(l=>HUES.map(h=>hsl2hex(h,85,l))),'#f6f6f6','#e4e4e4','#d0d0d0','#bcbcbc','#a8a8a8','#f0e4d6','#e6d3bd','#d9bfa3','#c9a985','#e9e6c8','#d6dcc0','#c9d3dc'];
+const K={red:hsl2hex(0,80,80),orange:hsl2hex(24,85,80),yellow:hsl2hex(54,85,78),green:hsl2hex(130,65,78),teal:hsl2hex(172,65,76),blue:hsl2hex(215,85,82),purple:hsl2hex(270,80,84),pink:hsl2hex(325,80,84),brown:'#d9bfa3',white:'#f6f6f6',gray:'#e4e4e4',dark:'#bcbcbc'};
+const fromList=(chars,list)=>Object.fromEntries([...chars].map((g,i)=>[g,list[i%list.length]]));
+const PRESETS={
+  'Pastel mix':()=>({...fromList(SETS.letters,SETS.letters.map((g,i)=>hsl2hex((i*47)%360,80,[80,86,83][i%3]))),...fromList(SETS.digits,SETS.digits.map((g,i)=>hsl2hex((i*36+15)%360,82,82)))}),
+  'Fridge magnets':()=>({...fromList(SETS.letters,[K.red,K.orange,K.yellow,K.green,K.blue,K.purple]),...fromList(SETS.digits,[K.red,K.orange,K.yellow,K.green,K.blue,K.purple])}),
+  'Common picks':()=>({...fromList(SETS.letters,'red blue yellow brown green green green orange white purple orange yellow red brown white pink purple red yellow teal gray purple blue dark yellow dark'.split(' ').map(n=>K[n])),...fromList(SETS.digits,'white gray blue green red yellow teal purple brown dark'.split(' ').map(n=>K[n]))})
+};
+const demoPalette=PRESETS['Pastel mix'];
+
+let pal,demo,S,stats;
+function loadState(){pal=store.get('chroma.palette',null);demo=!pal;if(demo)pal=demoPalette();
+  S=Object.assign({t:.6,al:.9,ink:false,size:24},store.get('chroma.settings2',{}));stats=store.get('chroma.stats',null)}
+loadState();
+
+/* ---------- tabs + theme ---------- */
+function show(tab){$$('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));$$('main>section').forEach(s=>s.hidden=s.id!=='tab-'+tab);if(tab==='reader')render(1)}
+$$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+$('#theme').onclick=()=>{const R=document.documentElement,cur=R.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');R.dataset.theme=cur==='dark'?'light':'dark';store.set('chroma.theme',R.dataset.theme);refresh()};
+{const t=store.get('chroma.theme',null);if(t)document.documentElement.dataset.theme=t}
+
+/* ---------- shared refresh ---------- */
+function picker(box,onPick,live){
+  box.innerHTML='<div class="swgrid"></div><div class="sliders"><span>Hue</span><input type="range" class="hue" min="0" max="360" value="200" aria-label="Hue"><span>Shade</span><input type="range" class="shade" min="60" max="94" value="74" aria-label="Shade, light to deep"><button class="use">Use this color</button></div>';
+  const grid=box.firstChild,[hue,shade]=box.querySelectorAll('input'),use=box.querySelector('.use');
+  SW.forEach(c=>{const b=document.createElement('button');b.className='sw';b.style.background=c;b.setAttribute('aria-label','Color '+c);b.onclick=()=>onPick(c);grid.append(b)});
+  const cur=()=>hsl2hex(+hue.value,85,154-shade.value);
+  const upd=()=>{shade.style.background=`linear-gradient(90deg,hsl(${hue.value} 85% 94%),hsl(${hue.value} 85% 60%))`;use.style.background=cur();use.style.color=DARK;return cur()};
+  hue.oninput=shade.oninput=()=>{const c=upd();if(live)live(c)};use.onclick=()=>onPick(cur());upd()}
+function refresh(){
+  const logo=$('#logo');logo.textContent='Chromagraph';chromaCore('paint',pal,{root:logo,host:logo,t:.7,al:1});
+  $$('.demoNote').forEach(e=>e.hidden=!demo);
+  drawGrid();
+  const pv=$('#preview');pv.textContent='The quick brown fox jumps over 13 lazy dogs, 24/7!';chromaCore('paint',pal,{root:pv,host:pv,t:S.t,al:S.al,ink:S.ink});
+  if(!$('#tab-reader').hidden)render(1);
+  repaintPdf();
+  $('#startMatch').disabled=demo||Object.keys(pal).length<4;
+  $('#matchHint').textContent=demo?'Speed match unlocks once you have set your colors.':'';
+  $('#lastStats').innerHTML=stats?`Last consistency score: <b>${stats.score.toFixed(2)}</b> (lower is more consistent).`:'';
+  buildBookmarklet();
+}
+function savePal(){demo=false;store.set('chroma.palette',pal);refresh()}
+
+/* ---------- presets ---------- */
+Object.keys(PRESETS).forEach(name=>{const p=PRESETS[name](),b=document.createElement('button');b.className='preset';
+  b.innerHTML=`<b>${name}</b><span>${[...'ABCDEFGH123'].map(g=>`<i style="background:${p[g]}">${g}</i>`).join('')}</span>`;
+  b.onclick=()=>{if(!demo&&!confirm('Replace your current palette with “'+name+'”?'))return;pal=PRESETS[name]();stats=null;store.del('chroma.stats');savePal();show('palette')};
+  $('#presets').append(b)});
+
+/* ---------- test ---------- */
+const stage=$('#stage'),G=$('#glyph');
+let T=null;
+const paintG=c=>{G.style.background=c||'';G.style.color=c?DARK:'';stage.style.setProperty('--glow',c||'transparent')};
+function begin(mode){
+  let q;
+  if(mode==='map'){const gl=$$('[name=set]:checked').flatMap(x=>SETS[x.value]);if(!gl.length)return;
+    const rounds=$('#twice').checked?2:1;q=[];for(let r=0;r<rounds;r++)q=q.concat(shuffle(gl));T={mode,q,i:0,picks:[],rounds}}
+  else{q=shuffle(Object.keys(pal)).slice(0,15);T={mode,q,i:0,picks:[],times:[]}}
+  $('#setup').hidden=true;$('#done').hidden=true;stage.hidden=false;
+  $('#pick').hidden=true;$('#choices').hidden=true;$('#ribbon').innerHTML='';$('#count').textContent='Get ready…';
+  const go=()=>{T.flash=0;$('#pick').hidden=mode!=='map';$('#choices').hidden=mode!=='match';trial()};
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return go();
+  let n=0;const pool=[...new Set(q)];
+  T.flash=setInterval(()=>{G.textContent=pool[Math.random()*pool.length|0];paintG(SW[Math.random()*60|0]);if(++n>18){clearInterval(T.flash);go()}},60);
+}
+function ribbon(){$('#ribbon').innerHTML=T.picks.map(c=>c?`<i style="background:${c}"></i>`:'<i class="none"></i>').join('')}
+function trial(){
+  if(T.i>=T.q.length)return finish();
+  const g=T.q[T.i];G.textContent=g;paintG(null);T.locked=false;
+  G.classList.remove('in','shake');void G.offsetWidth;G.classList.add('in');
+  $('#count').textContent=`${T.i+1} of ${T.q.length}`;ribbon();
+  if(T.mode==='map')$('#back').disabled=T.i===0;
+  else{const right=pal[g],opts=[right];
+    for(const c of shuffle(SW)){if(opts.length>=4)break;if(opts.every(o=>dist(o,c)>.3))opts.push(c)}
+    T.t0=performance.now();
+    const box=$('#choices');box.innerHTML='';shuffle(opts).forEach((c,i)=>{const b=document.createElement('button');b.style.background=c;b.textContent=i+1;b.dataset.c=c;b.onclick=()=>answer(b);box.append(b)})}
+}
+function answer(b){if(T.locked)return;T.locked=true;const g=T.q[T.i],right=pal[g],ok=b.dataset.c===right;
+  T.times.push(performance.now()-T.t0);T.picks.push(ok?right:null);
+  paintG(right);if(!ok)G.classList.add('shake');
+  $$('#choices button').forEach(x=>x.classList.add(x.dataset.c===right?'right':'wrong'));
+  T.timer=setTimeout(()=>{T.i++;trial()},ok?550:1100)}
+function pick(c){if(!T||T.mode!=='map'||T.flash||T.locked)return;T.locked=true;T.picks[T.i]=c;paintG(c);T.timer=setTimeout(()=>{T.i++;trial()},c?240:0)}
+picker($('#swatches'),pick,c=>{if(T&&T.mode==='map'&&!T.flash&&!T.locked)paintG(c)});
+$('#none').onclick=()=>pick(null);
+$('#back').onclick=()=>{if(T&&!T.locked&&T.i>0){T.i--;T.picks.length=T.i;trial()}};
+function quit(){if(T){clearInterval(T.flash);clearTimeout(T.timer)}T=null;stage.hidden=true;$('#setup').hidden=false}
+$('#quit').onclick=quit;
+$('#startMap').onclick=()=>begin('map');$('#startMatch').onclick=()=>begin('match');
+addEventListener('keydown',e=>{if(!T||stage.hidden||T.flash)return;
+  if(e.key==='Escape')return quit();
+  if(T.mode==='map'){if(e.key==='n'||e.key==='N')pick(null);else if(e.key==='Backspace')$('#back').click()}
+  else if(/^[1-4]$/.test(e.key)){const b=$$('#choices button')[e.key-1];if(b)answer(b)}});
+
+function finish(){
+  const D=$('#done');stage.hidden=true;D.hidden=false;let html;
+  if(T.mode==='map'){
+    const by={};T.q.forEach((g,i)=>(by[g]=by[g]||[]).push(T.picks[i]));
+    if(demo)pal={};const per={};
+    for(const g in by){const v=by[g].filter(Boolean).map(rgb);
+      if(!v.length){delete pal[g];continue}
+      pal[g]=hex([0,1,2].map(c=>v.reduce((s,x)=>s+x[c],0)/v.length));
+      if(v.length>1)per[g]=(Math.abs(v[0][0]-v[1][0])+Math.abs(v[0][1]-v[1][1])+Math.abs(v[0][2]-v[1][2]))/255}
+    const ks=Object.keys(per);
+    stats=ks.length?{score:ks.reduce((s,k)=>s+per[k],0)/ks.length,per}:null;
+    stats?store.set('chroma.stats',stats):store.del('chroma.stats');
+    const mapped=Object.keys(by).filter(g=>pal[g]);
+    html=`<h2>Palette saved</h2><p class="muted">${mapped.length} of ${Object.keys(by).length} symbols have a color.</p>
+      <div class="row" style="gap:4px;margin-bottom:16px">${mapped.sort((a,b)=>ALL.indexOf(a)-ALL.indexOf(b)).map(g=>`<span style="background:${pal[g]};color:${DARK};width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-weight:800">${g.replace('&','&amp;').replace('<','&lt;')}</span>`).join('')}</div>`;
+    if(stats){const same=ks.filter(k=>per[k]<.05).length;
+      html+=`<p><b>${same} of ${ks.length}</b> symbols got the same color both times. <span class="muted">Consistency score ${stats.score.toFixed(2)} (0 means identical every time).</span></p>`}
+    savePal();
+  }else{
+    const ok=T.picks.filter(Boolean).length,avg=T.times.reduce((a,b)=>a+b,0)/T.times.length/1000;
+    html=`<h2>${ok} of ${T.q.length} matched</h2><p class="muted">Average answer time ${avg.toFixed(1)}s.</p>`;
+  }
+  D.innerHTML=html+`<div class="row"><button class="primary" data-go="reader">Open the reader</button><button data-go="palette">See palette</button><button data-go="again">Back to test</button></div>`;
+  D.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{D.hidden=true;$('#setup').hidden=false;if(b.dataset.go!=='again')show(b.dataset.go)});
+  T=null;
+}
+
+/* ---------- palette ---------- */
+let selG=null;
+function drawGrid(){const grid=$('#grid');grid.innerHTML='';ALL.forEach(g=>{const b=document.createElement('button');b.className='tile'+(pal[g]?'':' empty')+(g===selG?' sel':'');b.textContent=g;
+  if(pal[g])b.style.background=pal[g];
+  b.onclick=()=>{selG=g;drawGrid();$('#editor').hidden=false;$('#edG').textContent=g;$('#edC').value=pal[g]||'#dddddd'};grid.append(b)})}
+{const setC=c=>{if(selG){pal[selG]=c;savePal()}};picker($('#edSw'),setC,setC)}
+$('#edC').oninput=e=>{if(selG){pal[selG]=e.target.value;savePal()}};
+$('#edX').onclick=()=>{if(selG){delete pal[selG];savePal()}};
+const palMsg=m=>{$('#palMsg').textContent=m;setTimeout(()=>$('#palMsg').textContent='',2500)};
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pal,null,1)],{type:'application/json'}));a.download='my-chromagraph-palette.json';a.click()};
+$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(pal));palMsg('Copied.')}catch(e){prompt('Copy this code:',JSON.stringify(pal))}};
+$('#imp').onclick=()=>$('#impFile').click();
+$('#impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text()),p={};for(const k in o)if([...k].length===1&&/^#[0-9a-f]{6}$/i.test(o[k]))p[k.toUpperCase()]=o[k];if(!Object.keys(p).length)throw 0;pal=p;savePal();palMsg('Palette loaded.')}catch(x){palMsg('That file is not a palette.')}e.target.value=''};
+$('#reset').onclick=()=>{if(!demo&&!confirm('Replace your palette with placeholder colors?'))return;pal=demoPalette();demo=true;stats=null;store.del('chroma.palette');store.del('chroma.stats');refresh()};
+
+/* ---------- reader ---------- */
+const ta=$('#ta'),paper=$('#paper'),MAX=200000;
+const opts=()=>({root:paper,host:paper,t:S.t,al:S.al,ink:S.ink});
+let rLines=[];
+function render(force){let t=ta.value;if(t.length>MAX){t=t.slice(0,MAX);readMsg(`Showing the first ${MAX.toLocaleString()} characters.`)}
+  const L=t?t.split('\n'):[],kids=paper.children,fresh=[];paper.style.fontSize=S.size+'px';
+  if(force||kids.length!==rLines.length){paper.textContent='';rLines=[]}
+  for(let i=0;i<L.length;i++){if(rLines[i]===L[i]&&kids[i])continue;
+    const d=document.createElement('div');d.className='ln';if(L[i])d.textContent=L[i];else d.append(document.createElement('br'));
+    if(kids[i])paper.replaceChild(d,kids[i]);else paper.append(d);fresh.push(d)}
+  while(kids.length>L.length)paper.lastChild.remove();rLines=L;
+  if(fresh.length>24)chromaCore('paint',pal,opts());else{fresh.forEach(d=>chromaCore('paint',pal,{...opts(),root:d}));if(!fresh.length)chromaCore('style',pal,opts())}}
+function readMsg(m){$('#readMsg').innerHTML=m}
+let deb;ta.oninput=()=>{closePdf();clearTimeout(deb);deb=setTimeout(render,180)};
+function syncCtl(){$('#blend').value=S.t*100;$('#strength').value=S.al*100;$('#size').value=S.size;$$('#styleSeg button').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.ink==='1')===S.ink));
+  ['#strengthL','#strengthW','#blendL','#blendW'].forEach(s=>$(s).style.opacity=S.ink?.35:1);$('#strength').disabled=$('#blend').disabled=S.ink}
+function setS(){store.set('chroma.settings2',S);syncCtl();if(PDF)pdfStyle();paper.style.fontSize=S.size+'px';chromaCore('style',pal,opts());chromaCore('style',pal,{host:$('#preview'),t:S.t,al:S.al,ink:S.ink});buildBookmarklet()}
+$('#blend').oninput=e=>{S.t=e.target.value/100;setS()};
+$('#strength').oninput=e=>{S.al=e.target.value/100;setS()};
+$('#size').oninput=e=>{S.size=+e.target.value;setS()};
+$$('#styleSeg button').forEach(b=>b.onclick=()=>{S.ink=b.dataset.ink==='1';setS()});
+$('#sample').onclick=()=>{closePdf();ta.value='Synesthesia is a blending of the senses. For some people the letter A is always red, 7 is always green, and Wednesday has a color of its own.\n\nPhone: 415-555-0182\nE = mc2, and 3 + 4 = 7.';render()};
+
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+const loadScript=src=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(new Error('Could not load the PDF reader (needs internet).'));document.head.append(s)});
+const pdfView=$('#pdfView');let PDF=null;
+const pdfWrap=$('#pdfWrap');
+function closePdf(){if(!PDF)return;clearTimeout(zT);if(PDF.io){PDF.io.disconnect();PDF.io2.disconnect()}PDF=null;if(document.fullscreenElement)document.exitFullscreen();pdfWrap.classList.remove('full');$('#fullPdf').textContent='Full screen';pdfView.innerHTML='';pdfWrap.hidden=true;paper.hidden=false;$('#closePdf').hidden=true;readMsg('')}
+$('#closePdf').onclick=closePdf;
+function repaintPdf(){if(!PDF)return;pdfView.querySelectorAll('.textLayer').forEach(tl=>{chromaCore('clear',pal,{root:tl});chromaCore('paint',pal,{root:tl,host:pdfView,t:S.t,al:S.al})})}
+function buildTextLayer(tl,tc,v){
+  const spans=[];
+  for(const it of tc.items){if(!it.str||!it.str.trim())continue;
+    const tx=pdfjsLib.Util.transform(v.transform,it.transform),st=tc.styles[it.fontName]||{};
+    let ang=Math.atan2(tx[1],tx[0]);if(st.vertical)ang+=Math.PI/2;
+    const fh=Math.hypot(tx[2],tx[3]);if(fh<1)continue;
+    const asc=(st.ascent!=null?st.ascent:st.descent!=null?1+st.descent:.8)*fh,sp=document.createElement('span');
+    sp.textContent=it.str;
+    sp.style.cssText=`left:${tx[4]+asc*Math.sin(ang)}px;top:${tx[5]-asc*Math.cos(ang)}px;font-size:${fh}px;font-family:"${it.fontName}",${st.fontFamily||'sans-serif'}`;
+    sp._w=(st.vertical?it.height:it.width)*v.scale;sp._a=ang;tl.append(sp);spans.push(sp)}
+  const ws=spans.map(sp=>sp.getBoundingClientRect().width);
+  spans.forEach((sp,i)=>{const k=ws[i]>0&&sp._w>0?sp._w/ws[i]:1;sp.style.transform=(sp._a?`rotate(${sp._a}rad) `:'')+`scaleX(${k})`})}
+function pdfStyle(){chromaCore('style',pal,{host:pdfView,t:S.t,al:S.al});pdfView.classList.toggle('pdf-ink',S.ink)}
+const MAXPX=2.4e7;
+function dropPage(div){if(!div._on)return;div._on=0;div._tok++;if(div._task){div._task.cancel();div._task=null}div.textContent=''}
+async function renderPage(div,me){
+  if(div._on)return;div._on=1;const tok=div._tok=(div._tok||0)+1,live=()=>PDF===me&&div._tok===tok&&div.isConnected;
+  const page=div._page,v=div._vp,c=document.createElement('canvas');
+  let dpr=Math.min(window.devicePixelRatio||1,2);const px=v.width*v.height*dpr*dpr;if(px>MAXPX)dpr*=Math.sqrt(MAXPX/px);
+  c.width=Math.floor(v.width*dpr);c.height=Math.floor(v.height*dpr);c.style.width=v.width+'px';c.style.height=v.height+'px';div.append(c);
+  const task=div._task=page.render({canvasContext:c.getContext('2d'),viewport:v,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null});
+  try{await task.promise}catch(x){if(!live()||(x&&x.name==='RenderingCancelledException'))return;throw x}
+  if(!live())return;div._task=null;
+  const tc=await page.getTextContent();if(!live())return;
+  const tl=document.createElement('div');tl.className='textLayer';tl.style.setProperty('--scale-factor',v.scale);div.append(tl);
+  buildTextLayer(tl,tc,v);
+  me.glyphs+=chromaCore('paint',pal,{root:tl,host:pdfView,t:S.t,al:S.al});pdfStyle();tl.classList.add('ready');
+  if(!tc.items.length)readMsg('Some pages have no selectable text (scanned pictures), so there is nothing to highlight on them.')}
+async function openPdf(buf,name){
+  if(!window.pdfjsLib){await loadScript(PDFJS+'pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js'}
+  const doc=await pdfjsLib.getDocument({data:buf}).promise;closePdf();
+  const me=PDF={doc,glyphs:0,gen:0,io:null};paper.hidden=true;pdfWrap.hidden=false;$('#closePdf').hidden=false;
+  readMsg(name+' · '+doc.numPages+(doc.numPages===1?' page':' pages')+'. Highlights are drawn on the PDF itself.');
+  await layoutPdf(me)}
+async function layoutPdf(me){
+  const gen=++me.gen;if(me.io){me.io.disconnect();me.io2.disconnect()}[...pdfView.children].forEach(dropPage);pdfView.innerHTML='';
+  me.io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)renderPage(e.target,me).catch(x=>readMsg('Could not draw a page: '+x.message));else dropPage(e.target)}),{root:pdfWrap.classList.contains('full')?pdfWrap:null,rootMargin:'1200px 0px'});
+  me.io2=new IntersectionObserver(es=>es.forEach(e=>e.target.classList.toggle('near',e.isIntersecting)),{root:me.io.root,rootMargin:'300px 0px'});
+  const W=Math.min(1200,Math.max(280,pdfView.clientWidth||600))*pdfZoom;
+  for(let p=1;p<=me.doc.numPages;p++){const page=await me.doc.getPage(p);if(PDF!==me||me.gen!==gen)return;
+    const v=page.getViewport({scale:W/page.getViewport({scale:1}).width}),div=document.createElement('div');
+    div.className='pg';div.style.width=v.width+'px';div.style.height=v.height+'px';div._page=page;div._vp=v;pdfView.append(div);me.io.observe(div);me.io2.observe(div)}}
+let pdfZoom=1,zT=0;
+function zoomPdf(z){z=Math.max(.5,Math.min(4,z));if(!PDF||z===pdfZoom)return;pdfZoom=z;$('#zPct').textContent=Math.round(z*100)+'%';clearTimeout(zT);zT=setTimeout(applyZoom,110)}
+async function applyZoom(){if(!PDF)return;
+  const top=pdfWrap.classList.contains('full')?pdfWrap.getBoundingClientRect().top+60:60,pgs=[...pdfView.children];
+  let i=pgs.findIndex(d=>d.getBoundingClientRect().bottom>top);if(i<0)i=0;
+  const r=pgs[i]?pgs[i].getBoundingClientRect():null,frac=r?Math.max(0,(top-r.top)/r.height):0;
+  const me=PDF;await layoutPdf(me);
+  const d=pdfView.children[i];if(PDF===me&&d){const sc=pdfWrap.classList.contains('full')?pdfWrap:document.scrollingElement;sc.scrollTop+=d.getBoundingClientRect().top+frac*d.offsetHeight-top}}
+$('#zIn').onclick=()=>zoomPdf(pdfZoom*1.25);$('#zOut').onclick=()=>zoomPdf(pdfZoom/1.25);$('#zPct').onclick=()=>zoomPdf(1);
+pdfWrap.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();zoomPdf(pdfZoom*(e.deltaY<0?1.1:1/1.1))}},{passive:false});
+function setFull(on){pdfWrap.classList.toggle('full',on);$('#fullPdf').textContent=on?'Exit full screen':'Full screen';if(PDF)layoutPdf(PDF)}
+$('#fullPdf').onclick=()=>{
+  if(!pdfWrap.classList.contains('full')){setFull(true);if(pdfWrap.requestFullscreen)pdfWrap.requestFullscreen().then(()=>PDF&&layoutPdf(PDF)).catch(()=>{})}
+  else if(document.fullscreenElement)document.exitFullscreen();else setFull(false)};
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&pdfWrap.classList.contains('full'))setFull(false)});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&pdfWrap.classList.contains('full')&&!document.fullscreenElement)setFull(false)});
+async function handleFile(f){if(!f)return;try{readMsg('Opening '+f.name.replace(/[<&]/g,'')+'…');
+    const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);
+    if(isPdf){await openPdf(await f.arrayBuffer(),f.name.replace(/[<&]/g,''));return}
+    closePdf();readMsg('');ta.value=await f.text();render()}
+  catch(e){readMsg('Could not read that file: '+(e.message||e))}}
+$('#openFile').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{handleFile(e.target.files[0]);e.target.value=''};
+pdfView.addEventListener('dragover',e=>e.preventDefault());pdfView.addEventListener('drop',e=>{e.preventDefault();handleFile(e.dataTransfer.files[0])});
+paper.addEventListener('dragover',e=>{e.preventDefault();paper.classList.add('drag')});
+paper.addEventListener('dragleave',()=>paper.classList.remove('drag'));
+paper.addEventListener('drop',e=>{e.preventDefault();paper.classList.remove('drag');handleFile(e.dataTransfer.files[0])});
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+$('#mic').onclick=()=>{
+  if(rec){rec.stop();return}
+  if(!SR){readMsg('Dictation is not available in this browser. Try Chrome, Edge or Safari.');return}
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang=navigator.language||'en-US';
+  let base=ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value;
+  rec.onresult=e=>{let live='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)base+=r[0].transcript.trim()+' ';else live+=r[0].transcript}ta.value=base+live;render()};
+  rec.onerror=e=>readMsg(e.error==='not-allowed'?'Microphone access was blocked. Allow it in the browser’s address bar and try again.':'Dictation stopped ('+e.error+').');
+  rec.onend=()=>{rec=null;$('#mic').textContent='Dictate';if($('#readMsg').querySelector('#recDot'))readMsg('')};
+  try{rec.start();$('#mic').textContent='Stop';readMsg('<span id="recDot"></span>Listening… speak and your words appear in color.')}catch(x){rec=null;readMsg('Could not start the microphone.')}
+};
+
+/* ---------- anywhere ---------- */
+function buildBookmarklet(){const code='(function(){var f='+chromaCore.toString()+';var s=getSelection(),r=s.rangeCount&&!s.isCollapsed?s.getRangeAt(0):null;if(!r&&document.querySelector(".chroma-w")){f("clear");return}var o='+JSON.stringify({t:S.t,al:S.al,ink:S.ink})+';o.range=r;f("paint",'+JSON.stringify(pal)+',o);if(r)s.removeAllRanges()})()';
+  $('#bm').setAttribute('href','javascript:'+encodeURIComponent(code))}
+$('#bm').onclick=e=>{e.preventDefault();alert('Drag this button up to your bookmarks bar, then click it on any page.')};
+const demoText=$('#demoText');
+$('#demoPaint').onmousedown=e=>e.preventDefault();
+$('#demoPaint').onclick=()=>{const s=getSelection();if(!s.rangeCount||s.isCollapsed||!demoText.contains(s.anchorNode))return;chromaCore('paint',pal,{root:demoText,host:demoText,range:s.getRangeAt(0),t:S.t,al:S.al,ink:S.ink});s.removeAllRanges()};
+$('#demoClear').onclick=()=>chromaCore('clear',pal,{root:demoText});
+
+/* ---------- accounts (Google sign-in) ---------- */
+const GOOGLE_CLIENT_ID='850584114665-bvvqdu5cllemce5o77q797n8c2mh5bmg.apps.googleusercontent.com';  /* paste a client ID here to skip the setup box for everyone using this copy */
+const acctDlg=$('#acctDlg'),clientId=()=>GOOGLE_CLIENT_ID||store.get('chroma.gcid','');
+let gsiFor=null;
+function avatar(el,u){el.textContent='';if(u.picture){const im=new Image();im.referrerPolicy='no-referrer';im.alt='';im.onerror=()=>{el.textContent=(u.name||'?')[0].toUpperCase()};im.src=u.picture;el.append(im)}else el.textContent=(u.name||'?')[0].toUpperCase()}
+function drawAcct(){const u=UID&&USERS[UID],b=$('#acct');b.textContent='';b.classList.toggle('out',!u);
+  if(u){const a=document.createElement('span');a.className='av';avatar(a,u);const n=document.createElement('span');n.textContent=(u.name||u.email||'Account').split(' ')[0];b.append(a,n);b.title='Signed in as '+(u.email||u.name)}else{b.textContent='Sign in';b.title=''}
+  $('#acctTitle').textContent=u?'Your account':'Sign in';$('#who').hidden=!u;$('#signOut').hidden=!u;
+  if(u){avatar($('#whoAv'),u);$('#whoName').textContent=u.name||'';$('#whoMail').textContent=u.email||''}
+  $('#acctBlurb').textContent=u?'Your colors, settings and test results are saved under this account on this device. Someone else? They can sign in below.':'Each person gets their own colors, settings and test results. Sign in with Google to open yours.'}
+function switchTo(id){UID=id;id?store.set('chroma.current',id):store.del('chroma.current');loadState();syncCtl();refresh();drawAcct();show('test')}
+function onCred(r){try{
+    const part=r.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'),c=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(part),x=>x.charCodeAt(0))));
+    if(!c.sub||c.aud!==clientId()||c.exp*1000<Date.now())throw 0;
+    const id=String(c.sub).replace(/[^\w-]/g,''),isNew=!USERS[id];USERS[id]={name:c.name||c.given_name||c.email||'Friend',email:c.email||'',picture:c.picture||''};store.set('chroma.users',USERS);
+    if(isNew&&!localStorage.getItem('chroma.u.'+id+'.palette')&&localStorage.getItem('chroma.palette')&&confirm('Copy the colors already saved on this device into '+USERS[id].name+'’s account?'))
+      Object.keys(PER).forEach(k=>{const v=localStorage.getItem(k);if(v)localStorage.setItem('chroma.u.'+id+k.slice(6),v)});
+    switchTo(id);$('#acctMsg').textContent='';acctDlg.close()}
+  catch(e){$('#acctMsg').textContent='That sign-in did not work. Please try again.'}}
+async function drawGoogle(){const id=clientId(),box=$('#gbtn'),setup=$('#gSetup');$('#gOrigin').textContent=location.origin;$('#gcid').value=store.get('chroma.gcid','');
+  if(location.protocol==='file:'){box.textContent='';$('#acctMsg').textContent='Google sign-in needs the app opened from a web address (like http://localhost:8765), not as a file.';return}
+  if(!id){box.textContent='';setup.open=true;$('#acctMsg').textContent='Google sign-in needs a one-time setup first.';return}
+  try{if(!(window.google&&google.accounts))await loadScript('https://accounts.google.com/gsi/client');
+    if(gsiFor!==id){google.accounts.id.initialize({client_id:id,callback:onCred,auto_select:false,ux_mode:'popup'});gsiFor=id}
+    box.textContent='';google.accounts.id.renderButton(box,{theme:'outline',size:'large',shape:'pill',text:UID?'continue_with':'signin_with',width:280});$('#acctMsg').textContent=''}
+  catch(e){$('#acctMsg').textContent='Could not reach Google (needs internet).'}}
+$('#acct').onclick=()=>{drawAcct();acctDlg.showModal();drawGoogle()};
+$('#acctClose').onclick=()=>acctDlg.close();
+acctDlg.addEventListener('click',e=>{if(e.target===acctDlg)acctDlg.close()});
+$('#signOut').onclick=()=>{try{window.google&&google.accounts.id.disableAutoSelect()}catch(e){}switchTo(null);acctDlg.close()};
+$('#gcidSave').onclick=()=>{const v=$('#gcid').value.trim();if(v&&!/\.apps\.googleusercontent\.com$/.test(v)){$('#acctMsg').textContent='A client ID ends in .apps.googleusercontent.com';return}v?store.set('chroma.gcid',v):store.del('chroma.gcid');$('#gSetup').open=!v;drawGoogle()};
+
+syncCtl();refresh();drawAcct();show('test');
+</script>
+</body>
+</html>
